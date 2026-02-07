@@ -5,6 +5,7 @@ This module provides screen capture and input simulation for Windows
 """
 import base64
 from io import BytesIO
+from PIL import Image
 
 def get_screen_capture():
     """Capture screen on Windows"""
@@ -12,11 +13,23 @@ def get_screen_capture():
         from PIL import ImageGrab
         screenshot = ImageGrab.grab()
         
-        # Convert to base64
+        # Resize to reduce data size (max 1280x720)
+        max_width = 1280
+        max_height = 720
+        width, height = screenshot.size
+        
+        if width > max_width or height > max_height:
+            ratio = min(max_width / width, max_height / height)
+            new_size = (int(width * ratio), int(height * ratio))
+            screenshot = screenshot.resize(new_size, Image.Resampling.LANCZOS)
+        
+        # Convert to base64 with lower quality for faster transfer
         buffer = BytesIO()
-        screenshot.save(buffer, format='JPEG', quality=70)
+        screenshot.save(buffer, format='JPEG', quality=50, optimize=True)
         screenshot_bytes = buffer.getvalue()
-        return base64.b64encode(screenshot_bytes).decode('utf-8')
+        screenshot_b64 = base64.b64encode(screenshot_bytes).decode('utf-8')
+        print(f"Screenshot captured: {len(screenshot_b64)} bytes")
+        return screenshot_b64
     except Exception as e:
         print(f"Screen capture error: {e}")
         return None

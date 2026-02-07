@@ -84,9 +84,21 @@ class RemoteClient:
             command = {'type': 'get_screen'}
             self.socket.send(json.dumps(command).encode('utf-8'))
             
-            # Receive response
-            response = json.loads(self.socket.recv(65536).decode('utf-8'))
-            return response.get('data')
+            # Receive response - handle large data
+            data = b''
+            while True:
+                chunk = self.socket.recv(65536)
+                if not chunk:
+                    break
+                data += chunk
+                # Try to parse - if it works, we have complete data
+                try:
+                    response = json.loads(data.decode('utf-8'))
+                    return response.get('data')
+                except json.JSONDecodeError:
+                    # Data incomplete, continue receiving
+                    continue
+                    
         except Exception as e:
             print(f"Error requesting screen: {e}")
             return None
