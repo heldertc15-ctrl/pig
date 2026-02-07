@@ -15,7 +15,7 @@ import io
 from datetime import datetime
 
 # Configuration - EDIT THESE BEFORE CREATING EXE
-PC_IP = "10.0.0.177"  # <-- EDIT THIS: Your PC's IP address
+PC_IP = "10.0.0.140"  # <-- EDIT THIS: Your PC's IP address
 PC_PORT = 5000
 AUTH_TOKEN = "MySecretPassword123"  # <-- EDIT THIS: Must match PC's password
 COMPUTER_NAME = "Computer2"  # <-- EDIT THIS: Name shown on dashboard
