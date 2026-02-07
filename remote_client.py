@@ -33,14 +33,24 @@ class RemoteClient:
             # Create socket
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             
-            # Create SSL context (accept self-signed certs for now)
-            self.ssl_context = ssl.create_default_context()
-            self.ssl_context.check_hostname = False
-            self.ssl_context.verify_mode = ssl.CERT_NONE
-            
-            # Connect
-            self.socket.connect((host, port))
-            self.socket = self.ssl_context.wrap_socket(self.socket, server_hostname=host)
+            # Try SSL first
+            try:
+                # Create SSL context (accept self-signed certs for now)
+                self.ssl_context = ssl.create_default_context()
+                self.ssl_context.check_hostname = False
+                self.ssl_context.verify_mode = ssl.CERT_NONE
+                
+                # Connect with SSL
+                self.socket.connect((host, port))
+                self.socket = self.ssl_context.wrap_socket(self.socket, server_hostname=host)
+                print("Connected with SSL encryption")
+            except Exception as ssl_error:
+                # SSL failed, try without SSL (for testing without certificates)
+                print(f"SSL connection failed, trying without encryption...")
+                self.socket.close()
+                self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.socket.connect((host, port))
+                print("Connected without SSL (testing mode)")
             
             # Authenticate
             auth_msg = {'token': AUTH_TOKEN}
