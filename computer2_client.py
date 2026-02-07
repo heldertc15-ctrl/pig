@@ -15,10 +15,11 @@ import io
 from datetime import datetime
 
 # Configuration - EDIT THESE BEFORE CREATING EXE
-PC_IP = "YOUR_PC_IP_HERE"  # e.g., "192.168.1.100"
+PC_IP = "10.0.0.177"  # <-- EDIT THIS: Your PC's IP address
 PC_PORT = 5000
-AUTH_TOKEN = "your_secure_password_here"
-COMPUTER_NAME = "Computer2"
+AUTH_TOKEN = "MySecretPassword123"  # <-- EDIT THIS: Must match PC's password
+COMPUTER_NAME = "Computer2"  # <-- EDIT THIS: Name shown on dashboard
+AUTO_CONNECT = True  # Set to True to connect automatically when .exe opens
 UPDATE_INTERVAL = 1  # Seconds between screenshots
 
 class ConnectionWindow:
@@ -203,11 +204,14 @@ class ConnectionWindow:
     
     def run(self):
         """Run the application"""
+        # Auto-connect if enabled
+        if AUTO_CONNECT:
+            self.root.after(1000, self.start_connection)  # Wait 1 second for window to show
         self.root.mainloop()
 
 if __name__ == "__main__":
-    # Check if IP is configured
-    if PC_IP == "YOUR_PC_IP_HERE":
+    # Check if IP is still set to default
+    if "YOUR_PC_IP_HERE" in PC_IP or PC_IP == "":
         root = tk.Tk()
         root.withdraw()
         messagebox.showerror(
