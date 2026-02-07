@@ -33,7 +33,7 @@ def configure_client(pc_ip, password):
     print("\n📝 Auto-configuring settings...")
     
     # Read current file
-    with open('computer2_client.py', 'r') as f:
+    with open('computer2_client.py', 'r', encoding='utf-8') as f:
         content = f.read()
     
     # Replace settings
@@ -51,30 +51,31 @@ def configure_client(pc_ip, password):
     )
     
     # Write back
-    with open('computer2_client.py', 'w') as f:
+    with open('computer2_client.py', 'w', encoding='utf-8') as f:
         f.write(content)
     
     print(f"  ✓ PC IP: {pc_ip}")
-    print(f"  ✓ Password: {password}")
     print(f"  ✓ Computer Name: RemotePC")
 
 def update_dashboard_password(password):
     """Update dashboard with same password"""
-    with open('pc_dashboard.py', 'r') as f:
-        content = f.read()
-    
-    # Find and replace the auth token
-    if 'AUTH_TOKEN = "' in content:
+    try:
+        with open('pc_dashboard.py', 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Find and replace the auth token
         lines = content.split('\n')
         for i, line in enumerate(lines):
-            if line.startswith('AUTH_TOKEN = "') and 'your_secure_password' not in line.lower():
-                lines[i] = f'AUTH_TOKEN = "{password}"  # Auto-generated (must match client)'
+            if 'AUTH_TOKEN' in line:
+                lines[i] = f'AUTH_TOKEN = "{password}"'
                 break
         content = '\n'.join(lines)
         
-        with open('pc_dashboard.py', 'w') as f:
+        with open('pc_dashboard.py', 'w', encoding='utf-8') as f:
             f.write(content)
         print("  ✓ Dashboard password updated")
+    except Exception as e:
+        print(f"  ⚠ Could not update dashboard password: {e}")
 
 def check_pyinstaller():
     """Check if pyinstaller is installed"""
@@ -99,9 +100,10 @@ def build_exe():
     
     # Auto-configure
     pc_ip = get_pc_ip()
-    password = generate_password()
-    configure_client(pc_ip, password)
-    update_dashboard_password(password)
+    configure_client(pc_ip, "simplepass123")
+    
+    print("\n🔨 Building .exe...")
+    print("(This may take 2-3 minutes)\n")
     
     print("\n🔨 Building .exe...")
     print("(This may take 2-3 minutes)\n")
@@ -135,7 +137,6 @@ def build_exe():
         print("   5️⃣  Watch dashboard - it will show 'RemotePC CONNECTED!'")
         print("\n⚙️  Configuration:")
         print(f"   🖥️  Your PC IP: {pc_ip}")
-        print(f"   🔑 Password: {password}")
         print("\n💡 The .exe will auto-connect when opened!")
         print("="*60)
         return True

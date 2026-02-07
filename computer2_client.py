@@ -17,8 +17,8 @@ from datetime import datetime
 # Configuration - EDIT THESE BEFORE CREATING EXE
 PC_IP = "10.0.0.140"  # <-- EDIT THIS: Your PC's IP address
 PC_PORT = 5000
-AUTH_TOKEN = "MySecretPassword123"  # <-- EDIT THIS: Must match PC's password
-COMPUTER_NAME = "Computer2"  # <-- EDIT THIS: Name shown on dashboard
+AUTH_TOKEN = "bO5VOFrPhw9ClFLZ"  # Auto-generated
+COMPUTER_NAME = "RemotePC"  # Auto-set
 AUTO_CONNECT = True  # Set to True to connect automatically when .exe opens
 UPDATE_INTERVAL = 1  # Seconds between screenshots
 
