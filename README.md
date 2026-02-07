@@ -1,208 +1,207 @@
 # Remote Desktop Software
 
-A secure remote desktop solution built with Python that avoids antivirus false positives.
+A secure remote desktop solution with reverse connection architecture. Your PC hosts the dashboard, and your laptop connects to it.
 
-## Features
+## Architecture
 
-- ✅ Remote screen viewing
-- ✅ Remote mouse control
-- ✅ Remote keyboard control
-- ✅ **Web Dashboard** - Monitor your laptop status from any browser
-- ✅ Encrypted connections (SSL/TLS)
-- ✅ Authentication required
-- ✅ Cross-platform (Windows, Linux, macOS)
-- ✅ No antivirus false positives
-- ✅ Internet connectivity support
+```
+┌─────────────────────────────────────────────────────────┐
+│  YOUR PC (Work From Here)                               │
+│  ┌─────────────────────────────┐                        │
+│  │  dashboard_server.py        │                        │
+│  │  - Listens for connections  │                        │
+│  │  - Hosts web dashboard      │                        │
+│  │  - Shows connected laptops  │                        │
+│  └─────────────────────────────┘                        │
+│  Dashboard URL: http://localhost:8080                   │
+└─────────────────────────────────────────────────────────┘
+                              ▲
+                              │ Laptop connects TO PC
+                              │
+┌─────────────────────────────────────────────────────────┐
+│  LAPTOP (Remote Device)                                 │
+│  ┌─────────────────────────────┐                        │
+│  │  laptop_client.py           │                        │
+│  │  - Connects to your PC      │                        │
+│  │  - Sends screenshots        │                        │
+│  │  - Works from anywhere      │                        │
+│  └─────────────────────────────┘                        │
+└─────────────────────────────────────────────────────────┘
+```
 
-## Security Design
+## How It Works
 
-This software is designed to avoid triggering antivirus software by:
+1. **PC** runs `dashboard_server.py` - waits for laptop to connect
+2. **Laptop** runs `laptop_client.py` - connects TO your PC
+3. **Dashboard** on PC shows "MyLaptop CONNECTED!"
+4. Laptop sends screenshots every 2 seconds
+5. View laptop screen on PC dashboard
 
-1. **Visible UI** - Shows a window and system tray icon when running
-2. **Explicit consent** - Requires authentication and user confirmation
-3. **Standard libraries** - Uses well-known Python packages (PIL, pyautogui)
-4. **Encryption** - All traffic is encrypted with SSL/TLS
-5. **Proper networking** - Uses standard socket connections with authentication
-6. **No persistence** - Doesn't install itself or run automatically
+## Files
+
+- **`dashboard_server.py`** - Run on PC, hosts dashboard and waits for connections
+- **`laptop_client.py`** - Run on laptop, connects to PC and sends screenshots
+- **`remote_client.py`** - Old file (not used anymore)
+- **`remote_server.py`** - Old file (not used anymore)
 
 ## Installation
 
 ### Prerequisites
 
-- Python 3.7 or higher
-- pip (Python package manager)
-- OpenSSL (for generating certificates)
+- Python 3.7+
+- pip
+- Both computers on same network (or PC has public IP/ngrok)
 
-### Quick Setup
+### Setup
 
-1. **Install dependencies:**
+1. **Install dependencies on BOTH computers:**
    ```bash
-   python setup.py
+   pip install Pillow pyautogui
    ```
 
-2. **Generate SSL certificates:**
+2. **Clone repo on BOTH computers:**
    ```bash
-   python generate_certs.py
+   git clone https://github.com/heldertc15-ctrl/pig.git
+   cd pig
    ```
-
-3. **Set your password:**
-   Edit both `remote_server.py` and `remote_client.py` and change:
-   ```python
-   AUTH_TOKEN = "your_secure_password_here"
-   ```
-   to your own secure password.
 
 ## Usage
 
-### On the laptop to be controlled (Server):
+### Step 1: Get Your PC's IP Address
+
+On your **PC**, run:
+```bash
+ipconfig
+```
+Look for "IPv4 Address" (e.g., `192.168.1.100` or `10.0.0.177`)
+
+### Step 2: Configure the Laptop
+
+On the **LAPTOP**, edit `laptop_client.py`:
+```python
+PC_IP = "YOUR_PC_IP_HERE"  # e.g., "192.168.1.100"
+AUTH_TOKEN = "your_secure_password_here"
+LAPTOP_ID = "MyLaptop"  # Name shown on dashboard
+```
+
+### Step 3: Configure the PC
+
+On your **PC**, edit `dashboard_server.py`:
+```python
+AUTH_TOKEN = "your_secure_password_here"  # Same as laptop!
+```
+
+### Step 4: Start the Dashboard (on PC)
 
 ```bash
-python remote_server.py
+python dashboard_server.py
 ```
 
 You'll see:
-- A console window showing connection status
-- "Server started" message with the IP and port
+```
+==================================================
+🖥️ Connection Listener Started
+==================================================
+Listening on: 0.0.0.0:5000
+Dashboard: http://localhost:8080
+Waiting for laptops to connect...
+==================================================
+```
 
-### On the connecting PC (Client):
+**Open browser on PC and go to:** `http://localhost:8080`
 
+### Step 5: Start the Laptop Client
+
+On the **LAPTOP**:
 ```bash
-python remote_client.py
+python laptop_client.py
 ```
 
-1. Click "Connection" → "Connect"
-2. Enter the server's IP address:
-   - For local network: Use the laptop's local IP (e.g., `192.168.1.100`)
-   - For internet: Use ngrok URL or public IP with port forwarding
-3. Enter your password when prompted
-4. The remote desktop will appear in the window
-
-## Web Dashboard
-
-The server includes a **built-in web dashboard** that lets you monitor your laptop's status from any browser without needing the full client application.
-
-### Accessing the Dashboard
-
-Once the server is running, open your browser and go to:
+You'll see:
 ```
-http://localhost:8080
-```
+==================================================
+🖥️ Remote Desktop - Laptop Client
+==================================================
+Laptop ID: MyLaptop
+PC Address: 192.168.1.100:5000
+Update interval: 2s
+==================================================
 
-Or from another device on your network:
-```
-http://<laptop-ip>:8080
+Starting... Press Ctrl+C to stop
+
+Connecting to PC at 192.168.1.100:5000...
+✓ Connected to PC! Authenticated as: MyLaptop
+📸 Screenshot sent (45231 bytes)
+📸 Screenshot sent (44892 bytes)
 ```
 
-### Dashboard Features
+### Step 6: View on Dashboard
 
-- **Server Status**: Real-time status showing if the server is online and if any clients are connected
-- **Connected Clients**: Lists all currently connected remote clients with their connection time
-- **Connection History**: Shows recent connection/disconnection events with timestamps
-- **Live Preview**: Displays the last captured screenshot from your laptop (auto-refreshes)
-- **Auto-refresh**: Dashboard updates every 2 seconds automatically
+On your PC's browser, you'll see:
+- ✅ "MyLaptop CONNECTED!"
+- Live screenshots updating every 2 seconds
+- Connection history
+- Laptop IP address
 
-### Use Cases
+## For Internet Access
 
-The dashboard is perfect for:
-- **Quick status checks** - See if your laptop is online without opening the full client
-- **Monitoring** - Track who/when connected to your laptop
-- **Mobile access** - View status from your phone/tablet browser
-- **Debugging** - Check connection history if you're having issues
+If laptop is not on same network as PC:
 
-## Internet Access
+### Option 1: Ngrok (Recommended)
 
-To connect over the internet, you have several options:
+On your **PC**:
+```bash
+# Install ngrok first from https://ngrok.com
+ngrok tcp 5000
+```
 
-### Option 1: Ngrok (Easiest)
+Copy the forwarding URL (e.g., `tcp://0.tcp.ngrok.io:12345`)
 
-1. Install ngrok: https://ngrok.com/download
-2. Run on the server laptop:
-   ```bash
-   ngrok tcp 5000
-   ```
-3. Copy the forwarding URL (e.g., `tcp://0.tcp.ngrok.io:12345`)
-4. Enter this URL in the client
+On **LAPTOP**, edit `laptop_client.py`:
+```python
+PC_IP = "0.tcp.ngrok.io"
+PC_PORT = 12345  # Port from ngrok
+```
 
 ### Option 2: Port Forwarding
 
-1. Configure your router to forward port 5000 to your laptop
-2. Find your public IP: https://whatismyipaddress.com
-3. Enter the public IP in the client
-
-### Option 3: VPN
-
-Use a VPN service (like Tailscale, ZeroTier, or your own VPN) to create a secure tunnel between devices.
-
-## File Structure
-
-```
-.
-├── remote_server.py      # Server application (run on controlled laptop)
-├── remote_client.py      # Client application (run on connecting PC)
-├── windows_impl.py       # Windows-specific screen/input handling
-├── generate_certs.py     # SSL certificate generator
-├── setup.py              # Setup and dependency installer
-└── README.md             # This file
-```
-
-## Customization
-
-### Change port:
-Edit `remote_server.py` and `remote_client.py`:
-```python
-SERVER_PORT = 5000  # Change to your preferred port
-```
-
-### Adjust screen quality:
-Edit `windows_impl.py`:
-```python
-screenshot.save(buffer, format='JPEG', quality=70)  # 1-100
-```
-
-### Add more security:
-- Use stronger authentication (replace simple token with JWT)
-- Add IP whitelist
-- Implement rate limiting
-- Add connection timeout
+1. Forward port 5000 on your router to your PC
+2. Use your public IP in laptop_client.py
 
 ## Troubleshooting
 
 ### "Connection refused"
-- Check firewall settings (allow port 5000)
-- Verify the server is running
-- Check IP address is correct
+- Check PC's IP address (may have changed)
+- Disable Windows Firewall temporarily
+- Ensure both on same network
 
 ### "Authentication failed"
-- Verify passwords match in both files
+- Check passwords match in both files
 - Check for typos
 
-### Slow performance
-- Reduce screen quality in `windows_impl.py`
-- Decrease update frequency in `remote_client.py`
-- Use a faster network connection
+### Dashboard shows offline
+- Refresh browser (Ctrl+R)
+- Check laptop client is running
+- Check laptop can ping PC: `ping PC_IP`
 
-### Antivirus warnings
-If you still get warnings:
-1. Add an exception for Python/python.exe
-2. Run from source code (not compiled)
-3. Consider using a different port (some AVs flag 5000)
+### No screenshots
+- Check laptop has permissions to capture screen
+- Try running as Administrator on laptop
 
-## Security Considerations
+## Security
 
-⚠️ **Important:** This is a basic implementation. For production use:
+- Change default password!
+- Use strong password (16+ characters)
+- For internet, use VPN or ngrok
+- Don't expose PC directly to internet without firewall
 
-1. Use proper SSL certificates (not self-signed)
-2. Implement stronger authentication
-3. Add session management
-4. Log all connections
-5. Use a VPN for internet access
-6. Keep the software updated
-7. Don't expose directly to the internet without additional security
+## Dashboard Features
+
+- **Real-time status**: Shows when laptop connects/disconnects
+- **Live screenshots**: Auto-refresh every 2 seconds
+- **Connection history**: Track connect/disconnect events
+- **Multiple laptops**: Can connect multiple devices (each needs unique LAPTOP_ID)
 
 ## License
 
-This project is for educational and personal use. Use responsibly and only on systems you own or have permission to access.
-
-## Disclaimer
-
-This software is provided as-is. The authors are not responsible for misuse or damage caused by this software. Always use strong passwords and secure connections.
+For personal use only. Use responsibly.

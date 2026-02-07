@@ -10,6 +10,7 @@ import threading
 import base64
 import time
 from datetime import datetime
+from PIL import Image
 
 # Configuration - UPDATE THESE!
 PC_IP = "10.0.0.177"  # Your PC's IP address
