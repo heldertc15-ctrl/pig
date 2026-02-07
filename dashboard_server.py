@@ -350,6 +350,38 @@ class DashboardHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
+def recv_all(sock, n):
+    """Helper function to receive n bytes or return None if EOF"""
+    data = bytearray()
+    while len(data) < n:
+        packet = sock.recv(n - len(data))
+        if not packet:
+            return None
+        data.extend(packet)
+    return data
+
+def recv_message(sock):
+    """Receive a length-prefixed message"""
+    # First receive the length (4 bytes)
+    raw_length = recv_all(sock, 4)
+    if not raw_length:
+        return None
+    message_length = int.from_bytes(raw_length, byteorder='big')
+    
+    # Then receive the message
+    message_data = recv_all(sock, message_length)
+    if not message_data:
+        return None
+    
+    return json.loads(message_data.decode('utf-8'))
+
+def send_message(sock, message):
+    """Send a length-prefixed message"""
+    message_bytes = json.dumps(message).encode('utf-8')
+    message_length = len(message_bytes)
+    sock.sendall(message_length.to_bytes(4, byteorder='big'))
+    sock.sendall(message_bytes)
+
 class ConnectionListener:
     """Listens for laptop connections"""
     def __init__(self, host='0.0.0.0', port=5000):
@@ -361,17 +393,16 @@ class ConnectionListener:
     def authenticate_laptop(self, laptop_socket):
         """Authenticate laptop connection"""
         try:
-            auth_data = laptop_socket.recv(1024).decode('utf-8')
-            auth_msg = json.loads(auth_data)
+            auth_msg = recv_message(laptop_socket)
+            if not auth_msg:
+                return None
             
             if auth_msg.get('token') != AUTH_TOKEN:
-                response = {'status': 'error', 'message': 'Authentication failed'}
-                laptop_socket.send(json.dumps(response).encode('utf-8'))
+                send_message(laptop_socket, {'status': 'error', 'message': 'Authentication failed'})
                 return None
             
             laptop_id = auth_msg.get('laptop_id', 'unknown')
-            response = {'status': 'success', 'message': 'Authenticated'}
-            laptop_socket.send(json.dumps(response).encode('utf-8'))
+            send_message(laptop_socket, {'status': 'success', 'message': 'Authenticated'})
             return laptop_id
             
         except Exception as e:
@@ -394,25 +425,24 @@ class ConnectionListener:
         
         try:
             while self.running:
-                # Receive data from laptop
-                data = laptop_socket.recv(65536)
-                if not data:
+                # Receive message from laptop
+                message = recv_message(laptop_socket)
+                if not message:
                     break
                 
-                try:
-                    message = json.loads(data.decode('utf-8'))
-                    self.process_laptop_message(laptop_id, message)
-                except json.JSONDecodeError:
-                    # Might be partial data, buffer it
-                    pass
+                self.process_laptop_message(laptop_id, message)
                     
         except Exception as e:
             print(f"Error with laptop {laptop_id}: {e}")
         finally:
             print(f"✗ Laptop disconnected: {laptop_id}")
-            del self.laptop_sockets[laptop_id]
+            if laptop_id in self.laptop_sockets:
+                del self.laptop_sockets[laptop_id]
             dashboard.remove_laptop(laptop_id)
-            laptop_socket.close()
+            try:
+                laptop_socket.close()
+            except:
+                pass
     
     def process_laptop_message(self, laptop_id, message):
         """Process messages from laptop"""

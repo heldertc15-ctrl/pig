@@ -19,6 +19,34 @@ AUTH_TOKEN = "your_secure_password_here"  # Must match PC's token
 LAPTOP_ID = "MyLaptop"  # Name to identify this laptop
 SCREEN_UPDATE_INTERVAL = 2  # Seconds between screenshots
 
+def recv_all(sock, n):
+    """Helper function to receive n bytes or return None if EOF"""
+    data = bytearray()
+    while len(data) < n:
+        packet = sock.recv(n - len(data))
+        if not packet:
+            return None
+        data.extend(packet)
+    return data
+
+def recv_message(sock):
+    """Receive a length-prefixed message"""
+    raw_length = recv_all(sock, 4)
+    if not raw_length:
+        return None
+    message_length = int.from_bytes(raw_length, byteorder='big')
+    message_data = recv_all(sock, message_length)
+    if not message_data:
+        return None
+    return json.loads(message_data.decode('utf-8'))
+
+def send_message(sock, message):
+    """Send a length-prefixed message"""
+    message_bytes = json.dumps(message).encode('utf-8')
+    message_length = len(message_bytes)
+    sock.sendall(message_length.to_bytes(4, byteorder='big'))
+    sock.sendall(message_bytes)
+
 class RemoteClient:
     """Client that connects to PC and sends screenshots"""
     def __init__(self):
@@ -43,11 +71,11 @@ class RemoteClient:
                 'token': AUTH_TOKEN,
                 'laptop_id': LAPTOP_ID
             }
-            self.socket.send(json.dumps(auth_msg).encode('utf-8'))
+            send_message(self.socket, auth_msg)
             
             # Check response
-            response = json.loads(self.socket.recv(1024).decode('utf-8'))
-            if response.get('status') != 'success':
+            response = recv_message(self.socket)
+            if not response or response.get('status') != 'success':
                 raise Exception("Authentication failed")
             
             self.connected = True
@@ -105,7 +133,7 @@ class RemoteClient:
                 'timestamp': datetime.now().isoformat()
             }
             
-            self.socket.send(json.dumps(message).encode('utf-8'))
+            send_message(self.socket, message)
             print(f"📸 Screenshot sent ({len(screenshot_b64)} bytes)")
             
         except Exception as e:
